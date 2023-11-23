@@ -167,6 +167,41 @@ multilib_src_test() {
 
 }
 
+harden()
+{
+	local offenders=(
+		"${ED}/usr/libexec/dbus-daemon-launch-helper"
+	)
+
+	rm -f "${offenders[@]}" || die "Failed to delete offenders"
+
+	local found_unregistered_offenders=0
+
+	while IFS= read -d -r line
+	do
+		eerror "Found unregistered s[ug]id file: '${line}'"
+		found_unregistered_offenders=1
+	done < <( find "${ED}" -perm /u=s,g=s )
+
+	while IFS= read -r line
+	do
+		eerror "Found unregistered file with capabilities: '${line}'"
+		found_unregistered_offenders=1
+	done < <( getcap -r "${ED}" )
+
+	[[ "${found_unregistered_offenders}" -ne 0 ]] \
+		&& die "Found unregistered offenders. Bailing out."
+
+	cat > new_machineid.sh <<EOF
+#!/bin/sh
+rm -f "${EROOT}/etc/machine-id"
+dbus-uuidgen --ensure="${EROOT}/etc/machine-id"
+EOF
+	exeinto /etc/local.d
+	newexe new_machineid.sh new_machineid.start
+	newexe new_machineid.sh new_machineid.stop
+}
+
 multilib_src_install_all() {
 	newinitd "${T}"/dbus.initd dbus
 
@@ -194,6 +229,8 @@ multilib_src_install_all() {
 
 	mv "${ED}"/usr/share/doc/dbus/* "${ED}"/usr/share/doc/${PF}/ || die
 	rm -rf "${ED}"/usr/share/doc/dbus || die
+
+	harden
 }
 
 pkg_postinst() {
