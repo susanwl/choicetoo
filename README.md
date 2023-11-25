@@ -36,4 +36,8 @@ virtual/libudev::gentoo
 virtual/udev::gentoo
 ```
 
+2. `choicetoo` provides a `dbus` package with disabled bus activation and a
+`local.d` unit to regenerate machine-id. To use this version of `dbus` add
+`sys-apps/dbus::gentoo` to `packages.mask`.
+
 
